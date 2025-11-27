@@ -34,13 +34,11 @@ async function initializeApp() {
 async function loadAllData() {
     try {
         // --- 1. 초기 예산 계정 데이터 로드 (CSV 파일 사용) ---
-        // 파일 이름: 2026년_교육예산_초기배정.xlsx - 1_예산계정.csv
         const accountsResponse = await fetch('1_budget_accounts.csv');
         const accountsText = await accountsResponse.text();
         state.budgetAccounts = parseCSV(accountsText);
         
         // --- 2. 월별 배정 데이터 로드 (CSV 파일 사용) ---
-        // 파일 이름: 2026년_교육예산_초기배정.xlsx - 2_월별예산배정.csv
         const allocationsResponse = await fetch('2_monthly_allocations.csv');
         const allocationsText = await allocationsResponse.text();
         state.monthlyAllocations = parseCSV(allocationsText);
