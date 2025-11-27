@@ -159,7 +159,7 @@ function getMonthlyAllocation(accountName, month) {
     const allocation = state.monthlyAllocations.find(
         alloc => alloc.account_name === accountName && alloc.month === month
     );
-    return allocation ? allocation.allocated_budget : 0;
+    return allocation ? allocation.monthly_budget : 0; // 'allocated_budget' -> 'monthly_budget' (CSV 필드명에 맞게)
 }
 
 // 예산 알림 체크
@@ -204,7 +204,7 @@ function checkBudgetAlerts() {
     renderAlertHistory();
 }
 
-// 알림 생성 및 저장
+// 알림 생성 및 저장 (수정됨: 뷰어 모드)
 async function createAlert(accountName, alertType, message) {
     const alertData = {
         id: generateId(),
@@ -216,21 +216,11 @@ async function createAlert(accountName, alertType, message) {
         is_read: false
     };
     
-    try {
-        const response = await fetch('tables/alert_logs', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(alertData)
-        });
-        
-        if (response.ok) {
-            const newAlert = await response.json();
-            state.alerts.push(newAlert);
-            showAlertPopup(message, alertType);
-        }
-    } catch (error) {
-        console.error('알림 생성 오류:', error);
-    }
+    // ⚠️ 뷰어 모드: API 호출 제거. 로컬 상태에만 추가
+    state.alerts.push(alertData); 
+    showAlertPopup(message, alertType);
+    
+    // 기존 try...catch 블록 (API 요청) 제거
 }
 
 // 알림 팝업 표시
@@ -309,60 +299,13 @@ function renderAlertHistory() {
     });
 }
 
-// 집행 내역 폼 제출
+// 집행 내역 폼 제출 (수정됨: 뷰어 모드)
 document.getElementById('expenditureForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const accountName = document.getElementById('expAccount').value;
-    const date = document.getElementById('expDate').value;
-    const amount = parseInt(document.getElementById('expAmount').value);
-    const description = document.getElementById('expDescription').value;
-    const manager = document.getElementById('expManager').value;
-    const issue = document.getElementById('expIssue').value;
-    
-    const dateObj = new Date(date);
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth() + 1;
-    
-    const expenditureData = {
-        id: generateId(),
-        account_name: accountName,
-        expenditure_date: dateObj.toISOString(),
-        amount: amount,
-        description: description,
-        manager: manager,
-        issue: issue || '',
-        year: year,
-        month: month
-    };
-    
-    try {
-        const response = await fetch('tables/expenditures', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(expenditureData)
-        });
-        
-        if (response.ok) {
-            const newExpenditure = await response.json();
-            state.expenditures.push(newExpenditure);
-            
-            showAlert('집행 내역이 등록되었습니다', 'success');
-            e.target.reset();
-            
-            // 대시보드 업데이트
-            renderDashboard();
-            renderMonthlyTable();
-            updateCharts();
-            loadExpenditures();
-            checkBudgetAlerts();
-        } else {
-            showAlert('집행 내역 등록에 실패했습니다', 'error');
-        }
-    } catch (error) {
-        console.error('집행 내역 등록 오류:', error);
-        showAlert('집행 내역 등록 중 오류가 발생했습니다', 'error');
-    }
+    // ⚠️ 뷰어 모드: 데이터 입력 비활성화 경고
+    showAlert('뷰어 모드입니다. 새로운 집행 내역을 등록할 수 없습니다.', 'warning');
+    // 기존 API 호출 및 성공 로직 제거
 });
 
 // 집행 내역 로드
@@ -411,137 +354,22 @@ async function loadExpenditures() {
     });
 }
 
-// 집행 내역 삭제
+// 집행 내역 삭제 (수정됨: 뷰어 모드)
 async function deleteExpenditure(id) {
     if (!confirm('정말 삭제하시겠습니까?')) return;
     
-    try {
-        const response = await fetch(`tables/expenditures/${id}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            state.expenditures = state.expenditures.filter(exp => exp.id !== id);
-            showAlert('삭제되었습니다', 'success');
-            renderDashboard();
-            renderMonthlyTable();
-            updateCharts();
-            loadExpenditures();
-            checkBudgetAlerts();
-        }
-    } catch (error) {
-        console.error('삭제 오류:', error);
-        showAlert('삭제 중 오류가 발생했습니다', 'error');
-    }
+    // ⚠️ 뷰어 모드: 데이터 삭제 비활성화 경고
+    showAlert('뷰어 모드입니다. 집행 내역을 삭제할 수 없습니다.', 'warning');
+    // 기존 API 호출 및 성공 로직 제거
 }
 
-// 예산 이동 폼 제출
+// 예산 이동 폼 제출 (수정됨: 뷰어 모드)
 document.getElementById('transferForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const fromAccount = document.getElementById('transferFrom').value;
-    const toAccount = document.getElementById('transferTo').value;
-    const fromMonth = parseInt(document.getElementById('transferFromMonth').value);
-    const toMonth = parseInt(document.getElementById('transferToMonth').value);
-    const amount = parseInt(document.getElementById('transferAmount').value);
-    const reason = document.getElementById('transferReason').value;
-    
-    if (fromAccount === toAccount) {
-        showAlert('출발 계정과 도착 계정이 같을 수 없습니다', 'error');
-        return;
-    }
-    
-    // 출발 계정 잔액 확인
-    const fromAccountData = state.budgetAccounts.find(acc => acc.account_name === fromAccount);
-    const fromExpenditure = calculateTotalExpenditure(fromAccount);
-    const fromBalance = fromAccountData.annual_budget - fromExpenditure;
-    
-    if (fromBalance < amount) {
-        showAlert(`${fromAccount}의 잔액이 부족합니다 (잔액: ${formatCurrency(fromBalance)})`, 'error');
-        return;
-    }
-    
-    const toAccountData = state.budgetAccounts.find(acc => acc.account_name === toAccount);
-    const toExpenditure = calculateTotalExpenditure(toAccount);
-    const toBalance = toAccountData.annual_budget - toExpenditure;
-    
-    const transferData = {
-        id: generateId(),
-        from_account: fromAccount,
-        to_account: toAccount,
-        from_month: fromMonth,
-        to_month: toMonth,
-        transfer_date: new Date().toISOString(),
-        amount: amount,
-        reason: reason,
-        from_balance_before: fromBalance,
-        from_balance_after: fromBalance - amount,
-        to_balance_before: toBalance,
-        to_balance_after: toBalance + amount
-    };
-    
-    try {
-        const response = await fetch('tables/budget_transfers', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(transferData)
-        });
-        
-        if (response.ok) {
-            const newTransfer = await response.json();
-            state.transfers.push(newTransfer);
-            
-            // 예산 조정 (집행 내역으로 기록)
-            const adjustmentExpenditure = {
-                id: generateId(),
-                account_name: fromAccount,
-                expenditure_date: new Date().toISOString(),
-                amount: amount,
-                description: `예산 이동: ${toAccount}으로 이동`,
-                manager: '시스템',
-                issue: `이동ID: ${newTransfer.id}`,
-                year: new Date().getFullYear(),
-                month: new Date().getMonth() + 1
-            };
-            
-            const adjustmentIncome = {
-                id: generateId(),
-                account_name: toAccount,
-                expenditure_date: new Date().toISOString(),
-                amount: -amount,  // 음수로 기록하여 잔액 증가
-                description: `예산 이동: ${fromAccount}에서 이동받음`,
-                manager: '시스템',
-                issue: `이동ID: ${newTransfer.id}`,
-                year: new Date().getFullYear(),
-                month: new Date().getMonth() + 1
-            };
-            
-            await fetch('tables/expenditures', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(adjustmentExpenditure)
-            });
-            
-            await fetch('tables/expenditures', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(adjustmentIncome)
-            });
-            
-            showAlert('예산 이동이 완료되었습니다', 'success');
-            e.target.reset();
-            
-            // 데이터 다시 로드
-            await loadAllData();
-            renderDashboard();
-            renderMonthlyTable();
-            updateCharts();
-            loadTransferHistory();
-        }
-    } catch (error) {
-        console.error('예산 이동 오류:', error);
-        showAlert('예산 이동 중 오류가 발생했습니다', 'error');
-    }
+    // ⚠️ 뷰어 모드: 예산 이동 비활성화 경고
+    showAlert('뷰어 모드입니다. 예산 이동 기능을 사용할 수 없습니다.', 'warning');
+    // 기존 API 호출 및 성공 로직 제거
 });
 
 // 예산 이동 히스토리 로드
@@ -743,61 +571,14 @@ function closeEditModal() {
     document.getElementById('editExpenditureModal').classList.remove('active');
 }
 
-// 집행 내역 수정 폼 제출
+// 집행 내역 수정 폼 제출 (수정됨: 뷰어 모드)
 document.getElementById('editExpenditureForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const id = document.getElementById('editExpId').value;
-    const accountName = document.getElementById('editExpAccount').value;
-    const date = document.getElementById('editExpDate').value;
-    const amount = parseInt(document.getElementById('editExpAmount').value);
-    const description = document.getElementById('editExpDescription').value;
-    const manager = document.getElementById('editExpManager').value;
-    const issue = document.getElementById('editExpIssue').value;
+    // ⚠️ 뷰어 모드: 데이터 수정 비활성화 경고
+    showAlert('뷰어 모드입니다. 집행 내역을 수정할 수 없습니다.', 'warning');
+    // 기존 API 호출 및 성공 로직 제거
     
-    const dateObj = new Date(date);
-    const year = dateObj.getFullYear();
-    const month = dateObj.getMonth() + 1;
-    
-    const updatedData = {
-        account_name: accountName,
-        expenditure_date: dateObj.toISOString(),
-        amount: amount,
-        description: description,
-        manager: manager,
-        issue: issue || '',
-        year: year,
-        month: month
-    };
-    
-    try {
-        const response = await fetch(`tables/expenditures/${id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(updatedData)
-        });
-        
-        if (response.ok) {
-            const updated = await response.json();
-            const index = state.expenditures.findIndex(exp => exp.id === id);
-            if (index !== -1) {
-                state.expenditures[index] = updated;
-            }
-            
-            showAlert('집행 내역이 수정되었습니다', 'success');
-            closeEditModal();
-            
-            // 대시보드 업데이트
-            renderDashboard();
-            renderMonthlyTable();
-            updateCharts();
-            loadExpenditures();
-            checkBudgetAlerts();
-        } else {
-            showAlert('수정에 실패했습니다', 'error');
-        }
-    } catch (error) {
-        console.error('수정 오류:', error);
-        showAlert('수정 중 오류가 발생했습니다', 'error');
-    }
+    // 모달 닫기
+    closeEditModal(); 
 });
