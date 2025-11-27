@@ -43,14 +43,18 @@ async function loadAllData() {
         const allocationsText = await allocationsResponse.text();
         state.monthlyAllocations = parseCSV(allocationsText);
 
-        // --- 3. 집행 내역 데이터 로드 (⭐추가됨) ---
+        // --- 3. 집행 내역 데이터 로드 ---
         const expendituresResponse = await fetch('expenditures.csv');
         const expendituresText = await expendituresResponse.text();
-        // parseCSV로 로드
         state.expenditures = parseCSV(expendituresText); 
         
-        // --- 4. 동적 데이터(이동 내역, 알림)는 빈 배열로 초기화 ---
-        state.transfers = [];
+        // --- 4. 예산 이동 내역 데이터 로드 (⭐추가됨) ---
+        const transfersResponse = await fetch('transfers.csv');
+        const transfersText = await transfersResponse.text();
+        // parseCSV로 로드
+        state.transfers = parseCSV(transfersText); 
+        
+        // --- 5. 동적 데이터(알림)는 빈 배열로 초기화 ---
         state.alerts = [];
         
         console.log('데이터 로드 완료 (CSV 기반):', state);
@@ -60,7 +64,6 @@ async function loadAllData() {
         throw error;
     }
 }
-
 // 대시보드 렌더링
 function renderDashboard() {
     const accounts = ['자체교육', '위탁교육', '컨소시엄'];
