@@ -33,19 +33,23 @@ async function initializeApp() {
 // 모든 데이터 로드 (CSV 파일 로드 기반으로 수정)
 async function loadAllData() {
     try {
-        // --- 1. 초기 예산 계정 데이터 로드 (CSV 파일 사용) ---
+        // --- 1. 초기 예산 계정 데이터 로드 ---
         const accountsResponse = await fetch('1_budget_accounts.csv');
         const accountsText = await accountsResponse.text();
         state.budgetAccounts = parseCSV(accountsText);
         
-        // --- 2. 월별 배정 데이터 로드 (CSV 파일 사용) ---
+        // --- 2. 월별 배정 데이터 로드 ---
         const allocationsResponse = await fetch('2_monthly_allocations.csv');
         const allocationsText = await allocationsResponse.text();
         state.monthlyAllocations = parseCSV(allocationsText);
 
-        // --- 3. 동적 데이터(집행 내역, 이동 내역, 알림)는 빈 배열로 초기화 ---
-        // 뷰어 모드에서는 초기 데이터만 보여주고, 동적 데이터는 없다고 가정합니다.
-        state.expenditures = []; 
+        // --- 3. 집행 내역 데이터 로드 (⭐추가됨) ---
+        const expendituresResponse = await fetch('expenditures.csv');
+        const expendituresText = await expendituresResponse.text();
+        // parseCSV로 로드
+        state.expenditures = parseCSV(expendituresText); 
+        
+        // --- 4. 동적 데이터(이동 내역, 알림)는 빈 배열로 초기화 ---
         state.transfers = [];
         state.alerts = [];
         
