@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>교육문화팀 2026 예산 관리 시스템 </title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    
+    <!-- 산돌고딕체 -->
+    <link href="https://cdn.jsdelivr.net/gh/sun-typeface/SUIT/fonts/variable/woff2/SUIT-Variable.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --dark-primary: #1a2332;
+            --dark-secondary: #232d3f;
+            --dark-tertiary: #2d3748;
+            --accent-gold: #d4af37;
+            --accent-silver: #c0c0c0;
+            --text-primary: #ffffff;
+            --text-secondary: #a0aec0;
+            --border-subtle: #374151;
+        }
+        
+        body {
+            font-family: 'SUIT Variable', sans-serif;
+            background-color: var(--dark-primary);
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'SUIT Variable', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        
+        .luxury-card {
+            background: linear-gradient(135deg, var(--dark-secondary) 0%, var(--dark-tertiary) 100%);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .luxury-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+            border-color: var(--accent-gold);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin: 20px 0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+        }
+        
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: linear-gradient(135deg, var(--dark-secondary) 0%, var(--dark-tertiary) 100%);
+            border: 1px solid var(--border-subtle);
+            padding: 40px;
+            border-radius: 16px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.8);
+        }
+        
+        .alert-popup {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 2000;
+            min-width: 320px;
+            max-width: 420px;
+            animation: slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(440px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .nav-tab {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 1rem 1.5rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+        }
+        
+        .nav-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--accent-gold);
+            transition: width 0.3s ease;
+        }
+        
+        .nav-tab:hover {
+            color: var(--text-primary);
+        }
+        
+        .nav-tab.active {
+            color: var(--accent-gold);
+            font-weight: 600;
+        }
+        
+        .nav-tab.active::after {
+            width: 100%;
+        }
+        
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .progress-bar {
+            height: 4px;
+            border-radius: 2px;
+            background-color: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-silver));
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.875rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .badge-success {
+            background: rgba(52, 211, 153, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.3);
+        }
+        
+        .badge-warning {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
+        }
+        
+        .badge-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .badge-gold {
+            background: rgba(212, 175, 55, 0.15);
+            color: var(--accent-gold);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+        
+        table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        
+        th {
+            background: rgba(255, 255, 255, 0.03);
+            font-weight: 600;
+            text-align: left;
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+        }
+        
+        tr:hover td {
+            background: rgba(255, 255, 255, 0.02);
+        }
+        
+        input, select, textarea {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-gold);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+        }
+        
+        input::placeholder, textarea::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-gold), #b8941e);
+            color: var(--dark-primary);
+            font-weight: 600;
+            padding: 0.875rem 2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.875rem;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(212, 175, 55, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 0.875rem 2rem;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            border: 1px solid var(--border-subtle);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-size: 0.875rem;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-gold);
+        }
+        
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-gold), var(--accent-silver));
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border-subtle), transparent);
+            margin: 2rem 0;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--dark-secondary);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-subtle);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-gold);
+        }
+        
+        .luxury-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1.1;
+            background: linear-gradient(135deg, var(--accent-gold), var(--accent-silver));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .section-title {
+            font-size: 1.875rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- 알림 팝업 컨테이너 -->
+    <div id="alertContainer"></div>
+    
+    <!-- 헤더 -->
+    <header class="border-b" style="border-color: var(--border-subtle); background-color: var(--dark-secondary);">
+        <div class="max-w-7xl mx-auto px-6 py-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-xs tracking-widest mb-2" style="color: var(--accent-gold);">1440 RESERVE</div>
+                    <h1 class="luxury-title">2026년 교육문화팀 예산관리</h1>
+                    
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="refreshData()" class="btn-secondary">
+                        <i class="fas fa-sync-alt mr-2"></i>새로고침
+                    </button>
+                    <button onclick="showExportModal()" class="btn-primary">
+                        <i class="fas fa-download mr-2"></i>내보내기
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 네비게이션 탭 -->
+    <nav style="background-color: var(--dark-secondary); border-bottom: 1px solid var(--border-subtle);">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex">
+                <div class="nav-tab active" onclick="switchTab('dashboard')">
+                    <i class="fas fa-chart-line mr-2"></i>대시보드
+                </div>
+                <div class="nav-tab" onclick="switchTab('expenditure')">
+                    <i class="fas fa-coins mr-2"></i>집행 관리
+                </div>
+                <div class="nav-tab" onclick="switchTab('transfer')">
+                    <i class="fas fa-exchange-alt mr-2"></i>예산 이동
+                </div>
+                <div class="nav-tab" onclick="switchTab('alerts')">
+                    <i class="fas fa-bell mr-2"></i>알림
+                </div>
+                <div class="nav-tab" onclick="switchTab('analysis')">
+                    <i class="fas fa-chart-bar mr-2"></i>분석
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <main class="max-w-7xl mx-auto px-6 py-12">
+        <!-- 대시보드 탭 -->
+        <div id="tab-dashboard" class="tab-content active">
+            <!-- 전체 요약 카드 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
+                <div class="luxury-card stat-card rounded-xl p-6">
+                    <div class="text-xs tracking-widest mb-2" style="color: var(--text-secondary);">총 예산</div>
+                    <div class="text-3xl font-bold mb-1" id="totalBudget" style="color: var(--accent-gold);">-</div>
+                    <div class="text-xs" style="color: var(--text-secondary);">총 예산</div>
+                </div>
+                
+                <div class="luxury-card stat-card rounded-xl p-6">
+                    <div class="text-xs tracking-widest mb-2" style="color: var(--text-secondary);">총 집행액</div>
+                    <div class="text-3xl font-bold mb-1 text-red-400" id="totalExpenditure">-</div>
+                    <div class="text-xs" style="color: var(--text-secondary);">총 집행액</div>
+                </div>
+                
+                <div class="luxury-card stat-card rounded-xl p-6">
+                    <div class="text-xs tracking-widest mb-2" style="color: var(--text-secondary);">총 잔액</div>
+                    <div class="text-3xl font-bold mb-1 text-green-400" id="totalBalance">-</div>
+                    <div class="text-xs" style="color: var(--text-secondary);">총 잔액</div>
+                </div>
+                
+                <div class="luxury-card stat-card rounded-xl p-6">
+                    <div class="text-xs tracking-widest mb-2" style="color: var(--text-secondary);">집행률</div>
+                    <div class="text-3xl font-bold mb-1" id="executionRate" style="color: var(--accent-silver);">-</div>
+                    <div class="text-xs" style="color: var(--text-secondary);">집행률</div>
+                </div>
+            </div>
+            
+            <!-- 계정별 상세 카드 -->
+            <h2 class="section-title">계정 현황</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="luxury-card rounded-xl p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold">자체교육</h3>
+                        <span class="badge badge-gold">주요</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">연간 예산</span>
+                            <span class="font-semibold" id="budget-자체교육">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">집행액</span>
+                            <span class="font-semibold text-red-400" id="expenditure-자체교육">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">잔액</span>
+                            <span class="font-semibold text-green-400" id="balance-자체교육">-</span>
+                        </div>
+                        <div class="progress-bar mt-6">
+                            <div class="progress-fill" id="progress-자체교육" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs" style="color: var(--text-secondary);">
+                            <span>집행률</span>
+                            <span id="rate-자체교육">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="luxury-card rounded-xl p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold">위탁교육</h3>
+                        <span class="badge badge-success">활성</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">연간 예산</span>
+                            <span class="font-semibold" id="budget-위탁교육">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">집행액</span>
+                            <span class="font-semibold text-red-400" id="expenditure-위탁교육">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">잔액</span>
+                            <span class="font-semibold text-green-400" id="balance-위탁교육">-</span>
+                        </div>
+                        <div class="progress-bar mt-6">
+                            <div class="progress-fill" id="progress-위탁교육" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs" style="color: var(--text-secondary);">
+                            <span>집행률</span>
+                            <span id="rate-위탁교육">0%</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="luxury-card rounded-xl p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-xl font-semibold">컨소시엄</h3>
+                        <span class="badge badge-warning">일반</span>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">연간 예산</span>
+                            <span class="font-semibold" id="budget-컨소시엄">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">집행액</span>
+                            <span class="font-semibold text-red-400" id="expenditure-컨소시엄">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span style="color: var(--text-secondary);">잔액</span>
+                            <span class="font-semibold text-green-400" id="balance-컨소시엄">-</span>
+                        </div>
+                        <div class="progress-bar mt-6">
+                            <div class="progress-fill" id="progress-컨소시엄" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs" style="color: var(--text-secondary);">
+                            <span>집행률</span>
+                            <span id="rate-컨소시엄">0%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <!-- 차트 영역 -->
+            <h2 class="section-title">시각화 분석</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+                <div class="luxury-card rounded-xl p-8">
+                    <h3 class="text-lg font-semibold mb-6">계정별 집행 현황</h3>
+                    <div class="chart-container">
+                        <canvas id="accountChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="luxury-card rounded-xl p-8">
+                    <h3 class="text-lg font-semibold mb-6">월별 집행 추이</h3>
+                    <div class="chart-container">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 월별 상세 현황 -->
+            <h2 class="section-title">월별 배정 및 집행</h2>
+            <div class="luxury-card rounded-xl p-8">
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>월</th>
+                                <th>자체교육 배정</th>
+                                <th>자체교육 집행</th>
+                                <th>위탁교육 배정</th>
+                                <th>위탁교육 집행</th>
+                                <th>컨소시엄 배정</th>
+                                <th>컨소시엄 집행</th>
+                                <th>총 배정</th>
+                                <th>총 집행</th>
+                            </tr>
+                        </thead>
+                        <tbody id="monthlyTableBody">
+                            <!-- 동적으로 생성 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 집행 관리 탭 -->
+        <div id="tab-expenditure" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 집행 내역 입력 폼 -->
+                <div class="lg:col-span-1">
+                    <div class="luxury-card rounded-xl p-8 sticky top-4">
+                        <h3 class="section-title text-xl">예산 집행 등록</h3>
+                        <form id="expenditureForm" class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">계정</label>
+                                <select id="expAccount" required class="w-full px-4 py-3">
+                                    <option value="">선택하세요</option>
+                                    <option value="자체교육">자체교육</option>
+                                    <option value="위탁교육">위탁교육</option>
+                                    <option value="컨소시엄">컨소시엄</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">집행일자</label>
+                                <input type="date" id="expDate" required class="w-full px-4 py-3">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">집행금액 (원)</label>
+                                <input type="number" id="expAmount" required min="0" step="1000" class="w-full px-4 py-3" placeholder="1,000,000">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">내용/사유</label>
+                                <textarea id="expDescription" required rows="3" class="w-full px-4 py-3" placeholder="집행 내용을 입력하세요"></textarea>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">담당자</label>
+                                <input type="text" id="expManager" required class="w-full px-4 py-3" placeholder="홍길동">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">이슈사항 (선택)</label>
+                                <textarea id="expIssue" rows="2" class="w-full px-4 py-3" placeholder="특이사항이 있으면 입력하세요"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary w-full">
+                                <i class="fas fa-save mr-2"></i>등록하기
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- 집행 내역 목록 -->
+                <div class="lg:col-span-2">
+                    <div class="luxury-card rounded-xl p-8">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="section-title text-xl">집행 내역</h3>
+                            <div class="flex gap-2">
+                                <select id="filterAccount" class="px-4 py-2 text-sm" onchange="loadExpenditures()">
+                                    <option value="">전체 계정</option>
+                                    <option value="자체교육">자체교육</option>
+                                    <option value="위탁교육">위탁교육</option>
+                                    <option value="컨소시엄">컨소시엄</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>일자</th>
+                                        <th>계정</th>
+                                        <th>금액</th>
+                                        <th>내용</th>
+                                        <th>담당자</th>
+                                        <th>작업</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenditureTableBody">
+                                    <!-- 동적으로 생성 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div id="expenditureEmpty" class="text-center py-16" style="color: var(--text-secondary); display: none;">
+                            <i class="fas fa-inbox text-6xl mb-4 opacity-30"></i>
+                            <p>등록된 집행 내역이 없습니다</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 예산 이동 탭 -->
+        <div id="tab-transfer" class="tab-content">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 예산 이동 폼 -->
+                <div class="lg:col-span-1">
+                    <div class="luxury-card rounded-xl p-8 sticky top-4">
+                        <h3 class="section-title text-xl">예산 이동</h3>
+                        <form id="transferForm" class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">출발 계정</label>
+                                <select id="transferFrom" required class="w-full px-4 py-3">
+                                    <option value="">선택하세요</option>
+                                    <option value="자체교육">자체교육</option>
+                                    <option value="위탁교육">위탁교육</option>
+                                    <option value="컨소시엄">컨소시엄</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">출발 월</label>
+                                <select id="transferFromMonth" required class="w-full px-4 py-3">
+                                    <option value="">선택하세요</option>
+                                    <option value="1">1월</option>
+                                    <option value="2">2월</option>
+                                    <option value="3">3월</option>
+                                    <option value="4">4월</option>
+                                    <option value="5">5월</option>
+                                    <option value="6">6월</option>
+                                    <option value="7">7월</option>
+                                    <option value="8">8월</option>
+                                    <option value="9">9월</option>
+                                    <option value="10">10월</option>
+                                    <option value="11">11월</option>
+                                    <option value="12">12월</option>
+                                </select>
+                            </div>
+                            
+                            <div class="text-center py-3">
+                                <i class="fas fa-arrow-down text-2xl" style="color: var(--accent-gold);"></i>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">도착 계정</label>
+                                <select id="transferTo" required class="w-full px-4 py-3">
+                                    <option value="">선택하세요</option>
+                                    <option value="자체교육">자체교육</option>
+                                    <option value="위탁교육">위탁교육</option>
+                                    <option value="컨소시엄">컨소시엄</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">도착 월</label>
+                                <select id="transferToMonth" required class="w-full px-4 py-3">
+                                    <option value="">선택하세요</option>
+                                    <option value="1">1월</option>
+                                    <option value="2">2월</option>
+                                    <option value="3">3월</option>
+                                    <option value="4">4월</option>
+                                    <option value="5">5월</option>
+                                    <option value="6">6월</option>
+                                    <option value="7">7월</option>
+                                    <option value="8">8월</option>
+                                    <option value="9">9월</option>
+                                    <option value="10">10월</option>
+                                    <option value="11">11월</option>
+                                    <option value="12">12월</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">이동금액 (원)</label>
+                                <input type="number" id="transferAmount" required min="0" step="1000" class="w-full px-4 py-3" placeholder="10,000,000">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">이동 사유</label>
+                                <textarea id="transferReason" required rows="3" class="w-full px-4 py-3" placeholder="예산 이동 사유를 입력하세요"></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn-primary w-full">
+                                <i class="fas fa-arrow-right mr-2"></i>이동 실행
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- 예산 이동 히스토리 -->
+                <div class="lg:col-span-2">
+                    <div class="luxury-card rounded-xl p-8">
+                        <h3 class="section-title text-xl mb-6">이동 히스토리</h3>
+                        
+                        <div id="transferList" class="space-y-4">
+                            <!-- 동적으로 생성 -->
+                        </div>
+                        
+                        <div id="transferEmpty" class="text-center py-16" style="color: var(--text-secondary); display: none;">
+                            <i class="fas fa-inbox text-6xl mb-4 opacity-30"></i>
+                            <p>예산 이동 내역이 없습니다</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 알림 히스토리 탭 -->
+        <div id="tab-alerts" class="tab-content">
+            <div class="luxury-card rounded-xl p-8">
+                <h3 class="section-title">알림 히스토리</h3>
+                
+                <div id="alertHistoryList" class="space-y-3">
+                    <!-- 동적으로 생성 -->
+                </div>
+                
+                <div id="alertsEmpty" class="text-center py-16" style="color: var(--text-secondary); display: none;">
+                    <i class="fas fa-inbox text-6xl mb-4 opacity-30"></i>
+                    <p>알림 내역이 없습니다</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 예측 분석 탭 -->
+        <div id="tab-analysis" class="tab-content">
+            <div class="grid grid-cols-1 gap-8">
+                <!-- 예산 소진 예측 -->
+                <div>
+                    <h2 class="section-title">예산 소진 예측</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="predictionCards">
+                        <!-- 동적으로 생성 -->
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <!-- 월별 트렌드 분석 -->
+                <div>
+                    <h2 class="section-title">월별 트렌드 분석</h2>
+                    <div class="luxury-card rounded-xl p-8">
+                        <div class="chart-container" style="height: 500px;">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+                
+                <!-- 통계 요약 -->
+                <div>
+                    <h2 class="section-title">통계 요약</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="statisticsCards">
+                        <!-- 동적으로 생성 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- 모달: 내보내기 -->
+    <div id="exportModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold">데이터 내보내기</h3>
+                <button onclick="closeExportModal()" style="color: var(--text-secondary);" class="hover:opacity-75">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <button onclick="exportData('expenditures')" class="btn-secondary w-full text-left">
+                    <i class="fas fa-file-excel mr-3"></i>집행 내역 다운로드 (CSV)
+                </button>
+                <button onclick="exportData('transfers')" class="btn-secondary w-full text-left">
+                    <i class="fas fa-file-excel mr-3"></i>예산 이동 내역 다운로드 (CSV)
+                </button>
+                <button onclick="exportData('monthly')" class="btn-secondary w-full text-left">
+                    <i class="fas fa-file-excel mr-3"></i>월별 현황 다운로드 (CSV)
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 모달: 집행 내역 수정 -->
+    <div id="editExpenditureModal" class="modal">
+        <div class="modal-content">
+            <div class="flex items-center justify-between mb-8">
+                <h3 class="text-2xl font-bold">집행 내역 수정</h3>
+                <button onclick="closeEditModal()" style="color: var(--text-secondary);" class="hover:opacity-75">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
+            
+            <form id="editExpenditureForm" class="space-y-5">
+                <input type="hidden" id="editExpId">
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">계정</label>
+                    <select id="editExpAccount" required class="w-full px-4 py-3">
+                        <option value="자체교육">자체교육</option>
+                        <option value="위탁교육">위탁교육</option>
+                        <option value="컨소시엄">컨소시엄</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">집행일자</label>
+                    <input type="date" id="editExpDate" required class="w-full px-4 py-3">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">집행금액 (원)</label>
+                    <input type="number" id="editExpAmount" required min="0" step="1000" class="w-full px-4 py-3">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">내용/사유</label>
+                    <textarea id="editExpDescription" required rows="3" class="w-full px-4 py-3"></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">담당자</label>
+                    <input type="text" id="editExpManager" required class="w-full px-4 py-3">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">이슈사항</label>
+                    <textarea id="editExpIssue" rows="2" class="w-full px-4 py-3"></textarea>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary flex-1">
+                        <i class="fas fa-save mr-2"></i>수정 완료
+                    </button>
+                    <button type="button" onclick="closeEditModal()" class="btn-secondary flex-1">
+                        취소
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="js/app.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/export.js"></script>
+</body>
+</html>
