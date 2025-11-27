@@ -30,37 +30,31 @@ async function initializeApp() {
     }
 }
 
-// 모든 데이터 로드
+// 모든 데이터 로드 (CSV 파일 로드 기반으로 수정)
 async function loadAllData() {
     try {
-        // 예산 계정 데이터
-        const accountsResponse = await fetch('tables/budget_accounts?limit=100');
-        const accountsData = await accountsResponse.json();
-        state.budgetAccounts = accountsData.data || [];
+        // --- 1. 초기 예산 계정 데이터 로드 (CSV 파일 사용) ---
+        // 파일 이름: 2026년_교육예산_초기배정.xlsx - 1_예산계정.csv
+        const accountsResponse = await fetch('2026년_교육예산_초기배정.xlsx - 1_예산계정.csv');
+        const accountsText = await accountsResponse.text();
+        state.budgetAccounts = parseCSV(accountsText);
         
-        // 월별 배정 데이터
-        const allocationsResponse = await fetch('tables/monthly_allocation?limit=200');
-        const allocationsData = await allocationsResponse.json();
-        state.monthlyAllocations = allocationsData.data || [];
+        // --- 2. 월별 배정 데이터 로드 (CSV 파일 사용) ---
+        // 파일 이름: 2026년_교육예산_초기배정.xlsx - 2_월별예산배정.csv
+        const allocationsResponse = await fetch('2026년_교육예산_초기배정.xlsx - 2_월별예산배정.csv');
+        const allocationsText = await allocationsResponse.text();
+        state.monthlyAllocations = parseCSV(allocationsText);
+
+        // --- 3. 동적 데이터(집행 내역, 이동 내역, 알림)는 빈 배열로 초기화 ---
+        // 뷰어 모드에서는 초기 데이터만 보여주고, 동적 데이터는 없다고 가정합니다.
+        state.expenditures = []; 
+        state.transfers = [];
+        state.alerts = [];
         
-        // 집행 내역 데이터
-        const expendituresResponse = await fetch('tables/expenditures?limit=1000');
-        const expendituresData = await expendituresResponse.json();
-        state.expenditures = expendituresData.data || [];
-        
-        // 예산 이동 내역
-        const transfersResponse = await fetch('tables/budget_transfers?limit=100');
-        const transfersData = await transfersResponse.json();
-        state.transfers = transfersData.data || [];
-        
-        // 알림 로그
-        const alertsResponse = await fetch('tables/alert_logs?limit=100');
-        const alertsData = await alertsResponse.json();
-        state.alerts = alertsData.data || [];
-        
-        console.log('데이터 로드 완료:', state);
+        console.log('데이터 로드 완료 (CSV 기반):', state);
     } catch (error) {
         console.error('데이터 로드 오류:', error);
+        showAlert('CSV 파일 로드 중 오류가 발생했습니다. 파일이 루트 폴더에 있는지 확인해 주세요.', 'error');
         throw error;
     }
 }
@@ -692,7 +686,34 @@ function showAlert(message, type = 'info') {
     container.appendChild(alertDiv);
     setTimeout(() => alertDiv.remove(), 3000);
 }
-
+// ⚠️ CSV 텍스트를 파싱하여 객체 배열로 반환하는 함수 (유틸리티 섹션에 추가)
+function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    if (lines.length === 0) return [];
+    
+    // 첫 번째 줄을 헤더(키)로 사용
+    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '')); 
+    
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',');
+        if (values.length !== headers.length) continue; 
+        
+        const obj = {};
+        for (let j = 0; j < headers.length; j++) {
+            // 따옴표 제거, 숫자는 parseInt로 변환 시도
+            let value = values[j].trim().replace(/"/g, '');
+            if (!isNaN(value) && value !== '') {
+                // 숫자인 경우 정수로 변환 (금액 데이터 때문)
+                obj[headers[j]] = parseInt(value); 
+            } else {
+                obj[headers[j]] = value;
+            }
+        }
+        result.push(obj);
+    }
+    return result;
+}
 function showLoading() {
     // 간단한 로딩 표시 (필요시 구현)
 }
