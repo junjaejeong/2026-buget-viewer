@@ -85,7 +85,9 @@ function createAccountChart() {
     accounts.forEach(accountName => {
         const account = state.budgetAccounts.find(acc => acc.account_name === accountName);
         if (account) {
-            const budget = account.annual_budget;
+            // ⭐ 수정: 초기 예산(account.annual_budget) 대신 최종 조정 예산 사용
+            const budget = calculateFinalAnnualBudget(accountName); 
+            // ⭐
             const expenditure = calculateTotalExpenditure(accountName);
             const balance = budget - expenditure;
             
@@ -316,7 +318,11 @@ function createTrendChart() {
         const account = state.budgetAccounts.find(acc => acc.account_name === accountName);
         if (!account) return null;
         
-        const monthlyAverage = account.annual_budget / 12;
+        // ⭐ 수정: 최종 조정 예산 사용
+        const finalBudget = calculateFinalAnnualBudget(accountName); 
+        // ⭐
+        
+        const monthlyAverage = finalBudget / 12; // ⭐ finalBudget으로 변경
         const data = [];
         
         for (let month = 1; month <= 12; month++) {
@@ -436,7 +442,9 @@ function renderPredictionCards() {
         const account = state.budgetAccounts.find(acc => acc.account_name === accountName);
         if (!account) return;
         
-        const budget = account.annual_budget;
+        // ⭐ 수정: 최종 조정 예산 사용
+        const budget = calculateFinalAnnualBudget(accountName); 
+        // ⭐
         const expenditure = calculateTotalExpenditure(accountName);
         const balance = budget - expenditure;
         
@@ -519,7 +527,9 @@ function renderStatistics() {
         const account = state.budgetAccounts.find(acc => acc.account_name === accountName);
         if (!account) return;
         
-        const budget = account.annual_budget;
+        // ⭐ 수정: 최종 조정 예산 사용
+        const budget = calculateFinalAnnualBudget(accountName); 
+        // ⭐
         const expenditure = calculateTotalExpenditure(accountName);
         const rate = budget > 0 ? (expenditure / budget * 100) : 0;
         
