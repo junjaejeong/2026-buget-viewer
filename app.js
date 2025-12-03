@@ -137,7 +137,7 @@ function calculateMonthlyExpenditure(accountName, month) {
         .reduce((sum, exp) => sum + (exp.amount || 0), 0);
 }
 
-// ⭐ 4. 최종 예산 계산 유틸리티 함수
+// ⭐ 4. 최종 예산 계산 유틸리티 함수 (charts.js에서 사용)
 /**
  * 최종 연간 예산을 계산합니다. (초기 예산 + 모든 조정 내역)
  * @param {string} accountName - 계정명
@@ -593,7 +593,7 @@ function showAlert(message, type = 'info') {
     container.appendChild(alertDiv);
     setTimeout(() => alertDiv.remove(), 3000);
 }
-// ⚠️ CSV 텍스트를 파싱하여 객체 배열로 반환하는 함수 (유틸리티 섹션에 추가)
+// ⚠️ CSV 텍스트를 파싱하여 객체 배열로 반환하는 함수 (최종 수정 반영: 소수점 오류 방지)
 function parseCSV(text) {
     const lines = text.trim().split('\n');
     if (lines.length === 0) return [];
@@ -608,11 +608,14 @@ function parseCSV(text) {
         
         const obj = {};
         for (let j = 0; j < headers.length; j++) {
-            // 따옴표 제거, 숫자는 parseInt로 변환 시도
+            // 따옴표 제거
             let value = values[j].trim().replace(/"/g, '');
+            
             if (!isNaN(value) && value !== '') {
-                // 숫자인 경우 정수로 변환 (금액 데이터 때문)
-                obj[headers[j]] = parseInt(value); 
+                // 숫자인 경우 실수(Float)로 변환
+                const floatValue = parseFloat(value);
+                // 금액 계산 오차 및 5원 오차 방지를 위해 정수 단위로 최종 반올림
+                obj[headers[j]] = Math.round(floatValue); 
             } else {
                 obj[headers[j]] = value;
             }
